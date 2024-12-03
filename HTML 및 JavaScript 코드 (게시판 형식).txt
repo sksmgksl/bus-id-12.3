@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>버스 정보 게시판</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; padding: 0; }
+        h1 { text-align: center; color: #333; }
+        .board-container { max-width: 800px; margin: 0 auto; }
+        .table-container { margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        th { background-color: #f4f4f4; }
+        td { background-color: #fdfdfd; }
+        .info { text-align: right; margin-top: 10px; color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>학과 종료 시간 기반 버스 정보 게시판</h1>
+    <div class="board-container">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>요일</th>
+                        <th>종료 시간</th>
+                        <th>추천 버스 ID</th>
+                        <th>출발 시간</th>
+                        <th>도착 시간</th>
+                        <th>배차 간격</th>
+                    </tr>
+                </thead>
+                <tbody id="busTableBody">
+                    <!-- 데이터가 동적으로 추가됩니다 -->
+                </tbody>
+            </table>
+        </div>
+        <p class="info">* 데이터는 순천대학교 출발 기준입니다.</p>
+    </div>
+
+    <script>
+        // 학과 종료 시간표
+        const classEndTimes = [
+            { day: '월요일', endTime: '11:00' },
+            { day: '화요일', endTime: '12:00' },
+            { day: '수요일', endTime: '10:00' },
+            { day: '목요일', endTime: '12:00' },
+            { day: '금요일', endTime: '17:00' }
+        ];
+
+        // 버스 노선 정보
+        const busRoutes = [
+            { id: 1, startTime: '08:45', interval: 110, lastTime: '21:30' },
+            { id: 14, startTime: '09:22', interval: 28, lastTime: '22:20' },
+            { id: 15, startTime: '08:15', interval: 135, lastTime: '20:40' },
+            { id: 16, startTime: '09:15', interval: 255, lastTime: '17:30' },
+            { id: 18, startTime: '08:30', interval: 285, lastTime: '17:50' },
+            { id: 34, startTime: '09:40', interval: 110, lastTime: '21:05' },
+            { id: 95, startTime: '09:20', interval: 80, lastTime: '22:00' },
+            { id: 96, startTime: '09:00', interval: 90, lastTime: '22:05' },
+            { id: 111, startTime: '09:05', interval: 65, lastTime: '21:05' }
+        ];
+
+        // 시간 계산 함수
+        function addMinutes(time, minutes) {
+            const [hour, minute] = time.split(':').map(Number);
+            const totalMinutes = hour * 60 + minute + minutes;
+            const newHour = Math.floor(totalMinutes / 60) % 24;
+            const newMinute = totalMinutes % 60;
+            return `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
+        }
+
+        // 버스 추천 로직
+        function getRecommendedBus(endTime) {
+            const result = [];
+            const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+
+            busRoutes.forEach(bus => {
+                let currentTime = bus.startTime;
+                while (currentTime <= bus.lastTime) {
+                    const currentMinutes = parseInt(currentTime.split(':')[0]) * 60 + parseInt(currentTime.split(':')[1]);
+                    if (currentMinutes >= endMinutes) {
+                        result.push({
+                            id: bus.id,
+                            startTime: currentTime,
+                            arriveTime: addMinutes(currentTime, 20), // 버스 이동 시간 20분 가정
+                            interval: `${bus.interval}분`
+                        });
+                        break;
+                    }
+                    currentTime = addMinutes(currentTime, bus.interval);
+                }
+            });
+
+            return result.sort((a, b) => a.startTime.localeCompare(b.startTime))[0]; // 가장 빠른 버스 추천
+        }
+
+        // 데이터 표시
+        const busTableBody = document.getElementById('busTableBody');
+        classEndTimes.forEach(classTime => {
+            const recommendedBus = getRecommendedBus(classTime.endTime);
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${classTime.day}</td>
+                <td>${classTime.endTime}</td>
+                <td>${recommendedBus ? recommendedBus.id : 'N/A'}</td>
+                <td>${recommendedBus ? recommendedBus.startTime : 'N/A'}</td>
+                <td>${recommendedBus ? recommendedBus.arriveTime : 'N/A'}</td>
+                <td>${recommendedBus ? recommendedBus.interval : 'N/A'}</td>
+            `;
+            busTableBody.appendChild(row);
+        });
+    </script>
+</body>
+</html>
